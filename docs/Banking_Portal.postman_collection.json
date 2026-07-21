@@ -1,0 +1,91 @@
+{
+  "info": {
+    "name": "Banking Portal REST API Collection",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login Customer",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"rajesh.kumar@example.com\",\n  \"password\": \"Password@123\"\n}"
+            },
+            "url": { "raw": "http://localhost:5000/api/auth/login" }
+          }
+        },
+        {
+          "name": "Login Admin",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@bankportal.com\",\n  \"password\": \"Password@123\"\n}"
+            },
+            "url": { "raw": "http://localhost:5000/api/auth/login" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Transactions",
+      "item": [
+        {
+          "name": "Deposit Funds",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"account_number\": \"100120240001\",\n  \"amount\": 5000,\n  \"description\": \"Monthly Deposit\"\n}"
+            },
+            "url": { "raw": "http://localhost:5000/api/transactions/deposit" }
+          }
+        },
+        {
+          "name": "Withdraw Funds",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"account_number\": \"100120240001\",\n  \"amount\": 2000,\n  \"description\": \"ATM Withdrawal\"\n}"
+            },
+            "url": { "raw": "http://localhost:5000/api/transactions/withdraw" }
+          }
+        },
+        {
+          "name": "Transfer Funds",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sender_account\": \"100120240001\",\n  \"receiver_account\": \"100120240003\",\n  \"amount\": 10000,\n  \"description\": \"Fund transfer\"\n}"
+            },
+            "url": { "raw": "http://localhost:5000/api/transactions/transfer" }
+          }
+        }
+      ]
+    }
+  ]
+}
