@@ -112,19 +112,19 @@ The platform segregates infrastructure into three distinct, decoupled operationa
 
 ```mermaid
 graph TB
-    subgraph Internet ["🌐 Public Internet"]
-        Users["👥 Banking Customers (Mobile / Web)"]
+    subgraph Internet ["Public Internet"]
+        Users["Banking Customers (Mobile / Web)"]
     end
 
-    subgraph DNS ["🌐 AWS Route 53 Domain Name System"]
-        PubDNS["Public Hosted Zone: rebel7781.xyz<br/>• virat.rebel7781.xyz ➔ Frontend ALB<br/>• api.rebel7781.xyz ➔ Backend ALB"]
-        PrivDNS["Private Hosted Zone: rbs.com<br/>• book.rbs.com ➔ RDS MySQL CNAME"]
+    subgraph DNS ["AWS Route 53 Domain Name System"]
+        PubDNS["Public Hosted Zone: rebel7781.xyz<br/>virat.rebel7781.xyz -> Frontend ALB<br/>api.rebel7781.xyz -> Backend ALB"]
+        PrivDNS["Private Hosted Zone: rbs.com<br/>book.rbs.com -> RDS MySQL CNAME"]
     end
 
-    subgraph AWS_VPC ["☁️ Amazon VPC: 10.20.0.0/16 (bank-vpc)"]
-        subgraph Public_Tier ["Public Subnets (Internet Ingress & Egress Gateway)"]
-            F_ALB["Public Frontend Application Load Balancer<br/>virat.rebel7781.xyz"]
-            B_ALB["Public Backend Application Load Balancer<br/>api.rebel7781.xyz"]
+    subgraph AWS_VPC ["Amazon VPC: 10.20.0.0/16 (bank-vpc)"]
+        subgraph Public_Tier ["Public Subnets (Internet Gateway Access)"]
+            F_ALB["Public Frontend ALB<br/>virat.rebel7781.xyz"]
+            B_ALB["Public Backend ALB<br/>api.rebel7781.xyz"]
             NAT_A["NAT Gateway AZ-a<br/>10.20.1.0/24"]
             NAT_B["NAT Gateway AZ-b<br/>10.20.2.0/24"]
         end
@@ -141,20 +141,25 @@ graph TB
 
         subgraph Database_Tier ["Database Tier (Isolated Private Subnets)"]
             RDS_PRI[("Amazon RDS MySQL Primary<br/>Subnet 10.20.7.0/24 (AZ-a)<br/>book.rbs.com")]
-            RDS_STBY[("Amazon RDS MySQL Standby<br/>Subnet 10.20.8.0/24 (AZ-b)<br/>(Synchronous Standby)")]
+            RDS_STBY[("Amazon RDS MySQL Standby<br/>Subnet 10.20.8.0/24 (AZ-b)<br/>Synchronous Standby")]
         end
     end
 
     Users -->|HTTPS / Port 443| PubDNS
     PubDNS -->|virat.rebel7781.xyz| F_ALB
     PubDNS -->|api.rebel7781.xyz| B_ALB
-    F_ALB -->|HTTP Port 80| F_EC2_A & F_EC2_B
-    B_ALB -->|Port 5000| B_EC2_A & B_EC2_B
-    F_EC2_A & F_EC2_B -->|Proxy /api| B_ALB
-    B_EC2_A & B_EC2_B -->|MySQL Port 3306| PrivDNS
+    F_ALB -->|HTTP Port 80| F_EC2_A
+    F_ALB -->|HTTP Port 80| F_EC2_B
+    B_ALB -->|Port 5000| B_EC2_A
+    B_ALB -->|Port 5000| B_EC2_B
+    F_EC2_A -->|Proxy /api| B_ALB
+    F_EC2_B -->|Proxy /api| B_ALB
+    B_EC2_A -->|MySQL Port 3306| PrivDNS
+    B_EC2_B -->|MySQL Port 3306| PrivDNS
     PrivDNS -->|Resolves Internal IP| RDS_PRI
-    RDS_PRI -.-|Multi-AZ Sync Replication| RDS_STBY
-    B_EC2_A & B_EC2_B -.->|Outbound Egress| NAT_A & NAT_B
+    RDS_PRI -.-|Multi-AZ Sync| RDS_STBY
+    B_EC2_A -.->|Outbound Egress| NAT_A
+    B_EC2_B -.->|Outbound Egress| NAT_B
 ```
 
 ---
@@ -166,16 +171,16 @@ graph LR
     subgraph VPC ["Amazon VPC: 10.20.0.0/16"]
         subgraph AZ_A ["Availability Zone: us-east-1a"]
             Subnet_1["Public Subnet 1<br/>10.20.1.0/24"]
-            Subnet_3["Presentation Private Subnet 3<br/>10.20.3.0/24"]
-            Subnet_5["Application Private Subnet 5<br/>10.20.5.0/24"]
-            Subnet_7["Database Private Subnet 7<br/>10.20.7.0/24"]
+            Subnet_3["Presentation Subnet 3<br/>10.20.3.0/24"]
+            Subnet_5["Application Subnet 5<br/>10.20.5.0/24"]
+            Subnet_7["Database Subnet 7<br/>10.20.7.0/24"]
         end
 
         subgraph AZ_B ["Availability Zone: us-east-1b"]
             Subnet_2["Public Subnet 2<br/>10.20.2.0/24"]
-            Subnet_4["Presentation Private Subnet 4<br/>10.20.4.0/24"]
-            Subnet_6["Application Private Subnet 6<br/>10.20.6.0/24"]
-            Subnet_8["Database Private Subnet 8<br/>10.20.8.0/24"]
+            Subnet_4["Presentation Subnet 4<br/>10.20.4.0/24"]
+            Subnet_6["Application Subnet 6<br/>10.20.6.0/24"]
+            Subnet_8["Database Subnet 8<br/>10.20.8.0/24"]
         end
     end
 
@@ -190,32 +195,32 @@ graph LR
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Client as 👥 User Browser / Mobile App
-    participant Route53 as 🌐 Route 53 (rebel7781.xyz)
-    participant ALB as ⚖️ Public ALB (Port 443)
-    participant Apache as 🖥️ Presentation EC2 (Apache Port 80)
-    participant BackendALB as ⚖️ Backend ALB (Port 5000)
-    participant Express as ⚙️ Application EC2 (Node.js Port 5000)
-    participant PrivDNS as 🔒 Private Route 53 (book.rbs.com)
-    participant RDS as 🗄️ Amazon RDS MySQL (Port 3306)
+    actor Client as User Browser Client
+    participant Route53 as Route 53 (rebel7781.xyz)
+    participant ALB as Public ALB (Port 443)
+    participant Apache as Presentation EC2 (Apache Port 80)
+    participant BackendALB as Backend ALB (Port 5000)
+    participant Express as Application EC2 (Node.js Port 5000)
+    participant PrivDNS as Private Route 53 (book.rbs.com)
+    participant RDS as Amazon RDS MySQL (Port 3306)
 
-    Client->>Route53: DNS Lookup: virat.rebel7781.xyz
+    Client->>Route53: DNS Lookup virat.rebel7781.xyz
     Route53-->>Client: Returns ALB Canonical IP Alias
     Client->>ALB: HTTPS GET Request (TLS 1.3 Encrypted)
     ALB->>Apache: Forwards HTTP GET / (Port 80)
-    Apache-->>Client: Returns Compiled React Production Bundle (dist/index.html)
-    
-    Note over Client,Express: User Clicks "Transfer Money" Button
-    Client->>Route53: DNS Lookup: api.rebel7781.xyz
+    Apache-->>Client: Returns Compiled React Production Bundle
+
+    Note over Client,Express: User Clicks Transfer Money Button
+    Client->>Route53: DNS Lookup api.rebel7781.xyz
     Route53-->>Client: Returns Backend ALB Canonical IP Alias
-    Client->>BackendALB: HTTPS POST /api/transactions/transfer (JWT Header)
+    Client->>BackendALB: HTTPS POST /api/transactions/transfer
     BackendALB->>Express: Forwards HTTP POST to Node.js EC2 (Port 5000)
-    Express->>Express: Authenticates JWT & Validates ₹1,000 Min Balance Rule
-    Express->>PrivDNS: Resolve DB Host: book.rbs.com
-    PrivDNS-->>Express: Returns RDS Primary Private IP (10.20.7.45)
-    Express->>RDS: SQL Transaction (BEGIN; UPDATE accounts... COMMIT;)
+    Express->>Express: Authenticates JWT and Validates Balance Rule
+    Express->>PrivDNS: Resolve DB Host book.rbs.com
+    PrivDNS-->>Express: Returns RDS Primary Private IP
+    Express->>RDS: Execute SQL Transaction
     RDS-->>Express: SQL Transaction Success
-    Express-->>Client: HTTP 200 OK {"status":"success","reference":"TXN987654"}
+    Express-->>Client: HTTP 200 OK Status Success
 ```
 
 ---
