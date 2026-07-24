@@ -91,10 +91,11 @@ const register = async (req, res, next) => {
 // @access  Public
 const login = async (req, res, next) => {
     try {
-        const { email, password } = req.body;
+        const email = req.body.email ? req.body.email.trim().toLowerCase() : '';
+        const password = req.body.password ? req.body.password.trim() : '';
 
-        // Fetch user from DB
-        const [users] = await query('SELECT * FROM users WHERE email = ?', [email]);
+        // Fetch user from DB (case-insensitive email search)
+        const [users] = await query('SELECT * FROM users WHERE LOWER(email) = ?', [email]);
         if (!users || users.length === 0) {
             return res.status(401).json({ success: false, message: 'Invalid credentials' });
         }
