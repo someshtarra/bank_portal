@@ -287,14 +287,6 @@ bank_portal/
 │   ├── .gitignore
 │   ├── package-lock.json
 │   └── package.json
-├── database/
-│   ├── schema.sql            # 3NF MySQL Database Schema
-│   └── seed.sql              # Pre-populated sample data
-├── docs/
-│   ├── API_DOCUMENTATION.md  # Complete REST API Specification
-│   ├── AWS_DEPLOYMENT_GUIDE.md # AWS 3-Tier Production Architecture Guide
-│   └── Banking_Portal.postman_collection.json
-├── docker-compose.yml        # Docker Multi-Container orchestration
 └── README.md
 ```
 
