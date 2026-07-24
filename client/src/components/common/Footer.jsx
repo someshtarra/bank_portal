@@ -9,7 +9,7 @@ export const Footer = () => {
           <div>
             <div className="flex items-center space-x-2 mb-3">
               <Landmark className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-              <span className="font-bold text-slate-900 dark:text-white">SOMESH NATIONAL BANK</span>
+              <span className="font-bold text-slate-900 dark:text-white">APEX NATIONAL BANK</span>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
               Enterprise 3-Tier Digital Banking Portal with end-to-end encryption, real-time transaction processing, and automated audit security.
@@ -50,7 +50,7 @@ export const Footer = () => {
         </div>
 
         <div className="border-t border-slate-100 dark:border-slate-800 pt-6 text-center text-xs text-slate-400 dark:text-slate-500">
-          © {new Date().getFullYear()} Somesh National Bank. All rights reserved. Production 3-Tier AWS Ready Architecture.
+          © {new Date().getFullYear()} Apex National Bank. All rights reserved. Production 3-Tier AWS Ready Architecture.
         </div>
       </div>
     </footer>

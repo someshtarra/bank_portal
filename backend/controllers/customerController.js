@@ -201,7 +201,7 @@ const addBeneficiary = async (req, res, next) => {
         await query(
             `INSERT INTO beneficiaries (customer_id, beneficiary_account, beneficiary_name, nickname, bank_name, ifsc_code)
              VALUES (?, ?, ?, ?, ?, ?)`,
-            [customerId, beneficiary_account, beneficiary_name, nickname || beneficiary_name, bank_name || 'Somesh National Bank', ifsc_code || 'SMNB0001024']
+            [customerId, beneficiary_account, beneficiary_name, nickname || beneficiary_name, bank_name || 'Apex National Bank', ifsc_code || 'APEX0001024']
         );
 
         await recordAuditLog(req.user.id, 'ADD_BENEFICIARY', req.ip, `Added beneficiary ${beneficiary_name} (${beneficiary_account})`);

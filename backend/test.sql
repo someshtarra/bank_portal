@@ -111,7 +111,7 @@ CREATE TABLE IF NOT EXISTS beneficiaries (
     beneficiary_account VARCHAR(20) NOT NULL,
     beneficiary_name VARCHAR(100) NOT NULL,
     nickname VARCHAR(50) DEFAULT NULL,
-    bank_name VARCHAR(100) DEFAULT 'Somesh National Bank',
+    bank_name VARCHAR(100) DEFAULT 'Apex National Bank',
     ifsc_code VARCHAR(11) DEFAULT 'AGNB0001024',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (customer_id) REFERENCES customers(customer_id) ON DELETE CASCADE,

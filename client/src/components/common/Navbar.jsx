@@ -36,7 +36,7 @@ export const Navbar = ({ toggleSidebar }) => {
             </div>
             <div>
               <span className="text-lg font-bold tracking-tight text-slate-900 dark:text-white">
-                SOMESH <span className="text-blue-600 dark:text-blue-400">BANK</span>
+                APEX <span className="text-blue-600 dark:text-blue-400">BANK</span>
               </span>
               <span className="hidden sm:block text-[10px] uppercase tracking-widest font-semibold text-slate-400 dark:text-slate-500">
                 National Portal

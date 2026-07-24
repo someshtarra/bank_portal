@@ -43,7 +43,7 @@ export const Contact = () => {
               <Mail className="w-5 h-5" />
               <span>Email Support</span>
             </div>
-            <p className="text-sm font-bold text-slate-900 dark:text-white">support@someshbank.com</p>
+            <p className="text-sm font-bold text-slate-900 dark:text-white">support@apexbank.com</p>
           </div>
 
           <div className="p-6 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl space-y-4">
@@ -52,7 +52,7 @@ export const Contact = () => {
               <span>Headquarters</span>
             </div>
             <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-              Somesh Tower, Financial District, MG Road, Bengaluru, KA 560001
+              Apex Financial Tower, Financial District, MG Road, Bengaluru, KA 560001
             </p>
           </div>
         </div>
