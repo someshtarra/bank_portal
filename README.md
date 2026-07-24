@@ -1,4 +1,4 @@
-# 🏦 Somesh National Bank - Enterprise Banking Portal
+# 🏦 Enterprise 3-Tier Digital Banking Platform
 
 A production-quality, three-tier Digital Banking Portal built with **React (Vite)**, **Node.js (Express)**, **MySQL (3NF)**, **Docker**, and **AWS Architecture**.
 
