@@ -55,7 +55,7 @@ export const Transactions = () => {
     const doc = new jsPDF();
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(18);
-    doc.text('ANTIGRAVITY NATIONAL BANK', 14, 20);
+    doc.text('SOMESH NATIONAL BANK', 14, 20);
 
     doc.setFontSize(11);
     doc.setFont('helvetica', 'normal');

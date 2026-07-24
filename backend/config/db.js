@@ -126,7 +126,7 @@ const setupSqliteFallback = () => {
                     beneficiary_account TEXT NOT NULL,
                     beneficiary_name TEXT NOT NULL,
                     nickname TEXT DEFAULT NULL,
-                    bank_name TEXT DEFAULT 'Antigravity National Bank',
+                    bank_name TEXT DEFAULT 'Somesh National Bank',
                     ifsc_code TEXT DEFAULT 'AGNB0001024',
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
                 )`);

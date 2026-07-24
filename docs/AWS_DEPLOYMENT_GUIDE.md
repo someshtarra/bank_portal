@@ -3,44 +3,62 @@
 This guide details how to deploy the **Banking Portal Application** on AWS using a highly available, secure 3-Tier Architecture.
 
 ```
-                   [ Internet ]
-                        │
-                  [ Route 53 ]
-                        │
-            ┌───────────┴───────────┐
-            ▼                       ▼
-   [ AWS CloudFront ]        [ Application ]
-            │                [ Load Balancer]
-            ▼                       │
-    [ Amazon S3 ]                   ▼
-  (Frontend React SPA)     ┌─────────────────┐
-                           │   EC2 Auto      │
-                           │   Scaling Group │ (Backend Node.js API)
-                           └────────┬────────┘
-                                    │
-                                    ▼
-                           ┌─────────────────┐
-                           │   Amazon RDS    │ (MySQL Multi-AZ)
-                           │ (Private Subnet)│
-                           └─────────────────┘
+                      [ Internet Users ]
+                              │
+                              ▼
+                   ┌─────────────────────┐
+                   │   Amazon Route 53   │
+                   └──────────┬──────────┘
+                              │
+       ┌──────────────────────┴──────────────────────┐
+       │ Public Hosted Zone: rebel7781.xyz           │
+       │  - virat.rebel7781.xyz  ──► Frontend ALB    │
+       │  - api.rebel7781.xyz    ──► Backend ALB     │
+       └─────────────────────────────────────────────┘
+
+========================================================================================
+VPC: 10.20.0.0/16
+========================================================================================
+
+  PUBLIC SUBNETS (Internet Gateway Access)
+  ├── 10.20.1.0/24 (AZ-a) : Frontend ALB (Node A) + NAT Gateway
+  └── 10.20.2.0/24 (AZ-b) : Frontend ALB (Node B) + NAT Gateway
+            │
+            ▼
+  PRESENTATION TIER (Frontend - React + Apache httpd)
+  ├── Private Subnet 10.20.3.0/24 (AZ-a) : Frontend EC2 Instances
+  └── Private Subnet 10.20.4.0/24 (AZ-b) : Frontend EC2 Instances
+            │
+            ▼ (via Backend ALB)
+  APPLICATION TIER (Backend - Node.js + Express + PM2)
+  ├── Private Subnet 10.20.5.0/24 (AZ-a) : Backend EC2 Instances
+  └── Private Subnet 10.20.6.0/24 (AZ-b) : Backend EC2 Instances
+            │
+            ▼ (Port 3306)
+  DATABASE TIER (Data Layer - Amazon RDS MySQL Multi-AZ)
+  ├── Private Subnet 10.20.7.0/24 (AZ-a) \
+  └── Private Subnet 10.20.8.0/24 (AZ-b) ──► Amazon RDS MySQL (book.rbs.com)
+========================================================================================
 ```
 
 ---
 
-## 1. Architecture Overview
+## 1. Architecture Specification
 
-### Tier 1: Frontend Presentation Tier
-- **Amazon S3**: Hosts static compiled React Vite SPA bundle (`dist/`).
-- **Amazon CloudFront**: Global CDN delivering TLS/SSL encryption, edge caching, and DDoS mitigation via AWS Shield.
+### Tier 1: Presentation Tier (Frontend Web Servers)
+- **Subnets**: `10.20.3.0/24` (AZ-a) & `10.20.4.0/24` (AZ-b)
+- **Tech Stack**: React (Vite SPA) served via Apache `httpd` web server.
+- **DNS**: `virat.rebel7781.xyz` pointing to Frontend ALB.
 
-### Tier 2: Backend Application Tier
-- **Application Load Balancer (ALB)**: Distributes incoming HTTPS requests across EC2 instances.
-- **Auto Scaling Group (ASG)**: EC2 instances running Node.js Express API inside Docker containers managed by PM2 or ECS.
-- **VPC Security Groups**: Restricts EC2 ingress exclusively to traffic originating from the ALB on port 5000.
+### Tier 2: Application Tier (Backend REST API)
+- **Subnets**: `10.20.5.0/24` (AZ-a) & `10.20.6.0/24` (AZ-b)
+- **Tech Stack**: Node.js + Express REST API managed by PM2 process manager.
+- **DNS**: `api.rebel7781.xyz` pointing to Backend ALB.
 
-### Tier 3: Database Tier
-- **Amazon RDS MySQL**: Multi-AZ deployment for zero data loss and automated failover.
-- **Private Subnet Isolation**: RDS instances placed in isolated private subnets inaccessible from the internet.
+### Tier 3: Database Tier (Data Storage)
+- **Subnets**: `10.20.7.0/24` (AZ-a) & `10.20.8.0/24` (AZ-b)
+- **Tech Stack**: Amazon RDS MySQL 8.0 Multi-AZ deployment.
+- **Private DNS**: `book.rbs.com` (Private Hosted Zone `rbs.com`).
 
 ---
 

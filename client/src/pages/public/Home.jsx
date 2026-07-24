@@ -58,7 +58,7 @@ export const Home = () => {
           <div className="relative flex justify-center">
             <div className="w-full max-w-md p-8 rounded-3xl bank-card-bg text-white shadow-2xl space-y-8 transform hover:rotate-1 transition-transform">
               <div className="flex justify-between items-center">
-                <span className="font-extrabold tracking-widest text-lg">ANTIGRAVITY</span>
+                <span className="font-extrabold tracking-widest text-lg">SOMESH BANK</span>
                 <CreditCard className="w-8 h-8 opacity-80" />
               </div>
               

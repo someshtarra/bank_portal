@@ -1,4 +1,4 @@
-# 🏦 Antigravity National Bank - Enterprise Banking Portal
+# 🏦 Somesh National Bank - Enterprise Banking Portal
 
 A production-quality, three-tier Digital Banking Portal built with **React (Vite)**, **Node.js (Express)**, **MySQL (3NF)**, **Docker**, and **AWS Architecture**.
 
@@ -42,38 +42,212 @@ All accounts pre-seeded with password: `Password@123`
 | **Employee** | `employee@bankportal.com` | `Password@123` | KYC Approval Queue, Branch Workbench |
 | **Admin** | `admin@bankportal.com` | `Password@123` | System Analytics, Freeze Accounts, Audit Logs |
 
----
+## 🏗️ AWS 3-Tier Architecture Overview
 
-## 🛠️ Quick Start Instructions
-
-### Option 1: Zero-Config Local Setup (Automatic DB Fallback)
-
-1. **Backend**:
-   ```bash
-   cd backend
-   npm install
-   npm run dev
-   ```
-   *Note: If MySQL is not running on port 3306, the backend automatically boots an in-memory database pre-seeded with all demo accounts!*
-
-2. **Frontend**:
-   ```bash
-   cd frontend
-   npm install
-   npm run dev
-   ```
-   Open `http://localhost:5173` in your browser.
-
----
-
-### Option 2: Docker Compose (Full Stack with MySQL)
-
-```bash
-docker-compose up --build -d
 ```
-- **Frontend SPA**: `http://localhost`
-- **Backend REST API**: `http://localhost:5000/api`
-- **MySQL DB**: `localhost:3306`
+                      [ Internet Users ]
+                              │
+                              ▼
+                   ┌─────────────────────┐
+                   │   Amazon Route 53   │
+                   └──────────┬──────────┘
+                              │
+       ┌──────────────────────┴──────────────────────┐
+       │ Public Hosted Zone: rebel7781.xyz           │
+       │  - virat.rebel7781.xyz  ──► Frontend ALB    │
+       │  - api.rebel7781.xyz    ──► Backend ALB     │
+       └─────────────────────────────────────────────┘
+
+========================================================================================
+VPC: 10.20.0.0/16
+========================================================================================
+
+  PUBLIC SUBNETS (Internet Gateway Access)
+  ├── 10.20.1.0/24 (AZ-a) : Frontend ALB (Node A) + NAT Gateway
+  └── 10.20.2.0/24 (AZ-b) : Frontend ALB (Node B) + NAT Gateway
+            │
+            ▼
+  PRESENTATION TIER (Frontend - React + Apache httpd)
+  ├── Private Subnet 10.20.3.0/24 (AZ-a) : Frontend EC2 Instances
+  └── Private Subnet 10.20.4.0/24 (AZ-b) : Frontend EC2 Instances
+            │
+            ▼ (via Backend ALB)
+  APPLICATION TIER (Backend - Node.js + Express + PM2)
+  ├── Private Subnet 10.20.5.0/24 (AZ-a) : Backend EC2 Instances
+  └── Private Subnet 10.20.6.0/24 (AZ-b) : Backend EC2 Instances
+            │
+            ▼ (Port 3306)
+  DATABASE TIER (Data Layer - Amazon RDS MySQL Multi-AZ)
+  ├── Private Subnet 10.20.7.0/24 (AZ-a) \
+  └── Private Subnet 10.20.8.0/24 (AZ-b) ──► Amazon RDS MySQL (book.rbs.com)
+========================================================================================
+```
+
+---
+
+## 🔌 Step-by-Step AWS 3-Tier Deployment & Connection Guide
+
+Follow this guide to deploy and connect **Somesh National Bank** across all 3 tiers in your AWS VPC (`10.20.0.0/16`).
+
+### 🌐 Network & Subnet Topology Breakdown
+
+| Tier | Availability Zone | Subnet CIDR | Component | Service |
+| :--- | :--- | :--- | :--- | :--- |
+| **Public** | `us-east-1a` | `10.20.1.0/24` | Frontend ALB & NAT Gateway | Public Gateway |
+| **Public** | `us-east-1b` | `10.20.2.0/24` | Frontend ALB & NAT Gateway | Public Gateway |
+| **Presentation** | `us-east-1a` | `10.20.3.0/24` | Frontend Web Server | EC2 (React + Apache) |
+| **Presentation** | `us-east-1b` | `10.20.4.0/24` | Frontend Web Server | EC2 (React + Apache) |
+| **Application** | `us-east-1a` | `10.20.5.0/24` | Backend REST API | EC2 (Node.js + PM2) |
+| **Application** | `us-east-1b` | `10.20.6.0/24` | Backend REST API | EC2 (Node.js + PM2) |
+| **Database** | `us-east-1a` | `10.20.7.0/24` | Database Primary | RDS MySQL Multi-AZ |
+| **Database** | `us-east-1b` | `10.20.8.0/24` | Database Standby | RDS MySQL Multi-AZ |
+
+---
+
+### Phase 1: Database Tier Setup (AWS RDS MySQL)
+
+#### Step 1.1: Configure `backend/.env`
+Go to the `backend/` directory on your EC2 instance and configure your `.env`:
+```bash
+cd backend
+nano .env
+```
+Paste your database credentials pointing to your Private Hosted Zone (`book.rbs.com`):
+```env
+PORT=5000
+NODE_ENV=production
+JWT_SECRET=my_super_secret_jwt_key_123
+
+# Database Connection (AWS RDS Multi-AZ via Private DNS)
+DB_HOST=book.rbs.com
+DB_PORT=3306
+DB_USER=admin
+DB_PASSWORD=Somesh12345
+DB_NAME=bank_portal_db
+```
+
+#### Step 1.2: Configure Database Security Group (`sg-database`)
+In AWS Console -> **RDS** -> Click your Database -> Click **VPC Security Group**:
+1. Click **Edit Inbound Rules** -> **Add Rule**:
+   - **Type**: `MySQL/Aurora` (Port `3306`)
+   - **Source**: `sg-backend` (or Application Subnets `10.20.5.0/24` & `10.20.6.0/24`)
+2. Click **Save rules**.
+
+#### Step 1.3: Import Database Schema & Seed Data
+Execute database initialization from a backend EC2 instance:
+```bash
+# Create database
+mysql -h book.rbs.com -u admin -p -e "CREATE DATABASE IF NOT EXISTS bank_portal_db;"
+
+# Import 3NF schema tables
+mysql -h book.rbs.com -u admin -p bank_portal_db < test.sql
+
+# Import seed data
+mysql -h book.rbs.com -u admin -p bank_portal_db < ../database/seed.sql
+```
+
+#### Step 1.4: Start Backend API with PM2
+```bash
+cd backend
+npm install
+pm2 start index.js --name "backendapi"
+pm2 save
+pm2 startup
+```
+*Verify output with `pm2 logs backendapi`. It will show `✅ MySQL Database connected successfully.`*
+
+---
+
+### Phase 2: Presentation Tier Setup (React Client + Apache)
+
+#### Step 2.1: Configure `client/.env`
+On your frontend build environment / EC2:
+```bash
+cd client
+nano .env
+```
+Set the Backend ALB Public Domain:
+```env
+VITE_API_URL=https://api.rebel7781.xyz/api
+```
+
+#### Step 2.2: Build Production Bundle
+```bash
+npm install
+npm run build
+```
+
+#### Step 2.3: Copy Build Assets to Apache
+```bash
+sudo mkdir -p /var/www/html/dist
+sudo cp -r dist/* /var/www/html/dist/
+sudo chown -R apache:apache /var/www/html/dist
+sudo chmod -R 755 /var/www/html/dist
+```
+
+#### Step 2.4: Configure Apache (`httpd`) Reverse Proxy
+Edit `/etc/httpd/conf.d/bank_portal.conf`:
+```bash
+sudo nano /etc/httpd/conf.d/bank_portal.conf
+```
+Paste:
+```apache
+<VirtualHost *:80>
+    ServerName virat.rebel7781.xyz
+    DocumentRoot /var/www/html/dist
+
+    <Directory "/var/www/html/dist">
+        Options Indexes FollowSymLinks
+        AllowOverride All
+        Require all granted
+
+        RewriteEngine On
+        RewriteBase /
+        RewriteRule ^index\.html$ - [L]
+        RewriteCond %{REQUEST_FILENAME} !-f
+        RewriteCond %{REQUEST_FILENAME} !-d
+        RewriteRule . /index.html [L]
+    </Directory>
+
+    ProxyRequests Off
+    ProxyPreserveHost On
+    ProxyPass /api http://127.0.0.1:5000/api
+    ProxyPassReverse /api http://127.0.0.1:5000/api
+</VirtualHost>
+
+<VirtualHost *:443>
+    ServerName virat.rebel7781.xyz
+    DocumentRoot /var/www/html/dist
+
+    SSLEngine on
+    SSLCertificateFile /etc/pki/tls/certs/localhost.crt
+    SSLCertificateKeyFile /etc/pki/tls/private/localhost.key
+
+    <Directory "/var/www/html/dist">
+        Options Indexes FollowSymLinks
+        AllowOverride All
+        Require all granted
+
+        RewriteEngine On
+        RewriteBase /
+        RewriteRule ^index\.html$ - [L]
+        RewriteCond %{REQUEST_FILENAME} !-f
+        RewriteCond %{REQUEST_FILENAME} !-d
+        RewriteRule . /index.html [L]
+    </Directory>
+
+    ProxyRequests Off
+    ProxyPreserveHost On
+    ProxyPass /api http://127.0.0.1:5000/api
+    ProxyPassReverse /api http://127.0.0.1:5000/api
+</VirtualHost>
+```
+
+#### Step 2.5: Test and Restart Apache
+```bash
+sudo httpd -t
+sudo systemctl restart httpd
+```
 
 ---
 
@@ -92,18 +266,27 @@ Executes Jest + Supertest suite testing authentication, deposit, minimum balance
 ```
 bank_portal/
 ├── backend/                  # Node.js + Express REST API
-│   ├── config/db.js          # MySQL connection pool + SQLite fallback
+│   ├── .env.example          # Environment variables template
+│   ├── .gitignore            # Git ignore rules
+│   ├── index.js              # Server entrypoint (npm / PM2)
+│   ├── package-lock.json
+│   ├── package.json
+│   ├── test.sql              # MySQL database schema script
+│   ├── server.js             # Express app setup
+│   ├── config/               # Database pool connection config
 │   ├── controllers/          # Auth, Customer, Admin, Employee, Loan, Card
 │   ├── middleware/           # Auth JWT, RBAC, Validation, Multer, Error
-│   ├── routes/               # Express routing
-│   ├── tests/                # Jest API tests
-│   └── server.js             # Express Server entrypoint
-├── frontend/                 # React.js (Vite) + Tailwind CSS SPA
+│   └── routes/               # Express API routing
+├── client/                   # React.js (Vite) + Tailwind CSS SPA Frontend
+│   ├── public/               # Static web assets
 │   ├── src/
 │   │   ├── components/       # Common UI, Charts, Layouts
 │   │   ├── context/          # AuthContext & ThemeContext
 │   │   ├── pages/            # Public, Customer, Admin, Employee views
 │   │   └── services/api.js   # Axios instance with JWT interceptors
+│   ├── .gitignore
+│   ├── package-lock.json
+│   └── package.json
 ├── database/
 │   ├── schema.sql            # 3NF MySQL Database Schema
 │   └── seed.sql              # Pre-populated sample data

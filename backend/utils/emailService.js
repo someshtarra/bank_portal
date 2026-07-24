@@ -17,13 +17,13 @@ const transporter = nodemailer.createTransport({
  */
 const sendTransactionNotification = async (email, recipientName, txnDetails) => {
     const mailOptions = {
-        from: `"Antigravity National Bank" <${process.env.FROM_EMAIL || 'noreply@antigravitybank.com'}>`,
+        from: `"Somesh National Bank" <${process.env.FROM_EMAIL || 'noreply@antigravitybank.com'}>`,
         to: email,
         subject: `Transaction Alert: ${txnDetails.transaction_type.toUpperCase()} of ₹${txnDetails.amount}`,
         html: `
             <div style="font-family: Arial, sans-serif; padding: 20px; color: #1e293b; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 12px;">
                 <div style="background-color: #0f172a; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
-                    <h1 style="color: #38bdf8; margin: 0; font-size: 24px;">Antigravity National Bank</h1>
+                    <h1 style="color: #38bdf8; margin: 0; font-size: 24px;">Somesh National Bank</h1>
                 </div>
                 <div style="padding: 20px;">
                     <h2>Dear ${recipientName},</h2>
@@ -36,7 +36,7 @@ const sendTransactionNotification = async (email, recipientName, txnDetails) => 
                         <tr style="border-bottom: 1px solid #cbd5e1;"><td style="padding: 8px 0; font-weight: bold;">Date:</td><td>${new Date().toLocaleString()}</td></tr>
                     </table>
                     <p style="margin-top: 20px;">If you did not authorize this transaction, please contact our 24x7 customer support immediately.</p>
-                    <p>Regards,<br><strong>Antigravity National Bank Team</strong></p>
+                    <p>Regards,<br><strong>Somesh National Bank Team</strong></p>
                 </div>
             </div>
         `
@@ -56,13 +56,13 @@ const sendTransactionNotification = async (email, recipientName, txnDetails) => 
 const sendPasswordResetEmail = async (email, resetToken) => {
     const resetUrl = `${process.env.CLIENT_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}`;
     const mailOptions = {
-        from: `"Antigravity National Bank" <${process.env.FROM_EMAIL || 'noreply@antigravitybank.com'}>`,
+        from: `"Somesh National Bank" <${process.env.FROM_EMAIL || 'noreply@antigravitybank.com'}>`,
         to: email,
-        subject: `Password Reset Request - Antigravity National Bank`,
+        subject: `Password Reset Request - Somesh National Bank`,
         html: `
             <div style="font-family: Arial, sans-serif; padding: 20px; color: #1e293b; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 12px;">
                 <div style="background-color: #0f172a; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
-                    <h1 style="color: #38bdf8; margin: 0; font-size: 24px;">Antigravity National Bank</h1>
+                    <h1 style="color: #38bdf8; margin: 0; font-size: 24px;">Somesh National Bank</h1>
                 </div>
                 <div style="padding: 20px;">
                     <h2>Password Reset Request</h2>
