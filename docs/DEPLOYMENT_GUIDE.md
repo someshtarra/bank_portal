@@ -1,97 +1,232 @@
-# Enterprise AWS 3-Tier Deployment Guide & Infrastructure Runbook
+# Enterprise AWS 3-Tier Infrastructure Deployment Runbook
 **Platform**: Enterprise 3-Tier Digital Banking Platform  
-**Classification**: Enterprise Production Engineering Runbook  
-**Target VPC CIDR**: `10.20.0.0/16`  
-**Domain Names**: `virat.rebel7781.xyz` (Frontend), `api.rebel7781.xyz` (Backend), `book.rbs.com` (Database)  
+**Classification**: Enterprise Production Operations Manual  
+**VPC CIDR**: `10.20.0.0/16`  
 
 ---
 
-## 📋 Comprehensive 25-Step Deployment Checklist
+## 📋 Complete AWS Component Provisioning Checklist
 
-- [x] Step 01: Create Amazon VPC (`10.20.0.0/16`)
-- [x] Step 02: Enable VPC DNS Hostnames & Resolution
-- [x] Step 03: Create & Attach Internet Gateway (`igw-bank-vpc`)
-- [x] Step 04: Create Multi-AZ Public Subnets (`10.20.1.0/24`, `10.20.2.0/24`)
-- [x] Step 05: Create Multi-AZ Presentation Private Subnets (`10.20.3.0/24`, `10.20.4.0/24`)
-- [x] Step 06: Create Multi-AZ Application Private Subnets (`10.20.5.0/24`, `10.20.6.0/24`)
-- [x] Step 07: Create Multi-AZ Database Isolated Subnets (`10.20.7.0/24`, `10.20.8.0/24`)
-- [x] Step 08: Allocate Elastic IPs & Create NAT Gateways
-- [x] Step 09: Configure Public & Private Route Tables
-- [x] Step 10: Configure Network ACLs (NACL)
-- [x] Step 11: Create Security Groups (`sg-alb`, `sg-frontend`, `sg-backend`, `sg-database`)
-- [x] Step 12: Configure IAM Roles & Instance Profiles
-- [x] Step 13: Provision Amazon RDS MySQL Multi-AZ DB Cluster (`book.rbs.com`)
-- [x] Step 14: Provision Application Tier EC2 Instances (Node.js + PM2)
-- [x] Step 15: Provision Presentation Tier EC2 Instances (React + Apache `httpd`)
-- [x] Step 16: Configure Target Groups (`tg-frontend-http`, `tg-backend-api`)
-- [x] Step 17: Create Application Load Balancers (Public Frontend & Backend ALBs)
-- [x] Step 18: Request & Validate AWS ACM SSL/TLS Certificates
-- [x] Step 19: Configure Route 53 Public Hosted Zone (`rebel7781.xyz`)
-- [x] Step 20: Configure Route 53 Private Hosted Zone (`rbs.com`)
-- [x] Step 21: Import Database Schema & Seed Data into RDS
-- [x] Step 22: Configure & Start Node.js Backend API via PM2
-- [x] Step 23: Configure Apache HTTP Reverse Proxy & SSL Termination
-- [x] Step 24: Deploy Compiled React SPA Production Artifacts
-- [x] Step 25: End-to-End Production Verification & Traffic Validation
+- [x] **Component 01: Amazon VPC Setup** (`10.20.0.0/16`)
+- [x] **Component 02: Multi-AZ Subnets & Route Tables** (Public, Presentation, Application, Isolated DB Tiers)
+- [x] **Component 03: Internet Gateway & NAT Gateways**
+- [x] **Component 04: Tiered Security Groups** (`sg-alb`, `sg-frontend`, `sg-backend`, `sg-database`)
+- [x] **Component 05: Amazon EC2 Golden Instance Provisioning**
+- [x] **Component 06: Amazon Machine Image (AMI) Bake** (`ami-bank-frontend-v1`, `ami-bank-backend-v1`)
+- [x] **Component 07: AWS Launch Templates** (`lt-bank-frontend`, `lt-bank-backend`)
+- [x] **Component 08: ALB Target Groups** (`tg-frontend-http`, `tg-backend-api`)
+- [x] **Component 09: Application Load Balancers** (Public Frontend ALB & Public/Internal Backend ALB)
+- [x] **Component 10: Auto Scaling Groups (ASG)** (`asg-frontend-tier`, `asg-backend-tier`)
+- [x] **Component 11: AWS Certificate Manager (ACM)** (SSL/TLS Encryption for `rebel7781.xyz`)
+- [x] **Component 12: Route 53 DNS Hosted Zones** (Public: `rebel7781.xyz`, Private: `rbs.com`)
+- [x] **Component 13: Amazon RDS MySQL Multi-AZ Cluster** (`book.rbs.com`)
 
 ---
 
-## Step 01: Create Amazon VPC (`10.20.0.0/16`)
+## Component 01: VPC & Subnet Network Setup
 
-### Purpose
-Establish an isolated virtual network boundary for the 3-tier banking application.
-
-### AWS Console Navigation
-AWS Console ➔ VPC ➔ **Create VPC** ➔ Select *VPC only* ➔ Name: `bank-vpc` ➔ IPv4 CIDR: `10.20.0.0/16`.
-
-### AWS CLI Command
 ```bash
+# 1. Create Amazon VPC
 aws ec2 create-vpc \
   --cidr-block 10.20.0.0/16 \
   --tag-specifications 'ResourceType=vpc,Tags=[{Key=Name,Value=bank-vpc}]'
-```
 
-### Verification Command
-```bash
-aws ec2 describe-vpcs --filters Name=tag:Name,Values=bank-vpc --query "Vpcs[0].[VpcId,CidrBlock,State]" --output table
-```
+# 2. Enable DNS Attributes
+aws ec2 modify-vpc-attribute --vpc-id vpc-12345678 --enable-dns-hostnames '{"Value": true}'
+aws ec2 modify-vpc-attribute --vpc-id vpc-12345678 --enable-dns-support '{"Value": true}'
 
-### Expected Output
-```text
----------------------------------------
-|            DescribeVpcs             |
-+----------------------+---------------+
-|  vpc-0a1b2c3d4e5f678 |  10.20.0.0/16 |  available
----------------------------------------
+# 3. Create Multi-AZ Subnets
+aws ec2 create-subnet --vpc-id vpc-12345678 --cidr-block 10.20.1.0/24 --availability-zone us-east-1a --tag-specifications 'ResourceType=subnet,Tags=[{Key=Name,Value=pub-sn-1a}]'
+aws ec2 create-subnet --vpc-id vpc-12345678 --cidr-block 10.20.2.0/24 --availability-zone us-east-1b --tag-specifications 'ResourceType=subnet,Tags=[{Key=Name,Value=pub-sn-2b}]'
+aws ec2 create-subnet --vpc-id vpc-12345678 --cidr-block 10.20.3.0/24 --availability-zone us-east-1a --tag-specifications 'ResourceType=subnet,Tags=[{Key=Name,Value=pvt-sn-3a}]'
+aws ec2 create-subnet --vpc-id vpc-12345678 --cidr-block 10.20.4.0/24 --availability-zone us-east-1b --tag-specifications 'ResourceType=subnet,Tags=[{Key=Name,Value=pvt-sn-4b}]'
+aws ec2 create-subnet --vpc-id vpc-12345678 --cidr-block 10.20.5.0/24 --availability-zone us-east-1a --tag-specifications 'ResourceType=subnet,Tags=[{Key=Name,Value=pvt-sn-5a}]'
+aws ec2 create-subnet --vpc-id vpc-12345678 --cidr-block 10.20.6.0/24 --availability-zone us-east-1b --tag-specifications 'ResourceType=subnet,Tags=[{Key=Name,Value=pvt-sn-6b}]'
+aws ec2 create-subnet --vpc-id vpc-12345678 --cidr-block 10.20.7.0/24 --availability-zone us-east-1a --tag-specifications 'ResourceType=subnet,Tags=[{Key=Name,Value=pvt-sn-7a}]'
+aws ec2 create-subnet --vpc-id vpc-12345678 --cidr-block 10.20.8.0/24 --availability-zone us-east-1b --tag-specifications 'ResourceType=subnet,Tags=[{Key=Name,Value=pvt-sn-8b}]'
 ```
 
 ---
 
-## Step 08: Allocate Elastic IPs & Create NAT Gateways
+## Component 06: Amazon Machine Image (AMI) Bake
 
 ### Purpose
-Provide secure outbound internet egress for private application subnets (for yum patches and external payment gateway calls) without allowing inbound internet connections.
+Bake hardened Golden AMIs containing pre-installed dependencies for rapid Auto Scaling instance launches.
 
 ### AWS CLI Commands
 ```bash
-# Allocate EIP for AZ-a NAT Gateway
-aws ec2 allocate-address \
-  --domain vpc \
-  --tag-specifications 'ResourceType=elastic-ip,Tags=[{Key=Name,Value=eip-nat-az-a}]'
+# 1. Create Golden AMI for Backend API Node.js Server
+aws ec2 create-image \
+  --instance-id i-0123456789backend \
+  --name "ami-bank-backend-v1.0" \
+  --description "Hardened Node.js 18 + PM2 Application Golden AMI" \
+  --no-reboot
 
-# Create NAT Gateway in Public Subnet 1 (AZ-a)
-aws ec2 create-nat-gateway \
-  --subnet-id subnet-10.20.1.0-id \
-  --allocation-id eipalloc-12345678 \
-  --tag-specifications 'ResourceType=natgateway,Tags=[{Key=Name,Value=nat-az-a}]'
+# 2. Create Golden AMI for Frontend Web Server (Apache)
+aws ec2 create-image \
+  --instance-id i-0123456789frontend \
+  --name "ami-bank-frontend-v1.0" \
+  --description "Hardened Apache httpd + React SPA Golden AMI" \
+  --no-reboot
 ```
 
 ---
 
-## Step 13: Provision Amazon RDS MySQL Multi-AZ Cluster
+## Component 07: AWS Launch Templates
 
 ### Purpose
-Create a high-availability, zero-data-loss relational database storage engine across `us-east-1a` and `us-east-1b`.
+Define standardized configuration parameters (AMI, Instance Type, Security Groups, IAM Profile, User Data) for Auto Scaling.
+
+### AWS CLI Commands
+```bash
+# Create Launch Template for Application Tier
+aws ec2 create-launch-template \
+  --launch-template-name lt-bank-backend \
+  --version-description "v1.0 Production Backend Template" \
+  --launch-template-data '{
+    "ImageId": "ami-0123456789backend",
+    "InstanceType": "c6i.large",
+    "SecurityGroupIds": ["sg-backend-id"],
+    "IamInstanceProfile": {"Name": "EC2-Application-Role"},
+    "UserData": "IyEvYmluL2Jhc2gKcG0yIHJlbG9hZCBiYWNrZW5kYXBp"
+  }'
+```
+
+---
+
+## Component 08: ALB Target Groups
+
+### Purpose
+Configure health checking pools for load balancer distribution.
+
+### AWS CLI Commands
+```bash
+# 1. Target Group for Backend REST API
+aws elbv2 create-target-group \
+  --name tg-backend-api \
+  --protocol HTTP \
+  --port 5000 \
+  --vpc-id vpc-12345678 \
+  --health-check-protocol HTTP \
+  --health-check-port 5000 \
+  --health-check-path /api/health \
+  --health-check-interval-seconds 15 \
+  --health-check-timeout-seconds 5 \
+  --healthy-threshold-count 2 \
+  --unhealthy-threshold-count 3
+
+# 2. Target Group for Frontend Apache Web Server
+aws elbv2 create-target-group \
+  --name tg-frontend-http \
+  --protocol HTTP \
+  --port 80 \
+  --vpc-id vpc-12345678 \
+  --health-check-protocol HTTP \
+  --health-check-path / \
+  --health-check-interval-seconds 15
+```
+
+---
+
+## Component 09: Application Load Balancers (ALB)
+
+### Purpose
+Distribute incoming HTTP/HTTPS traffic across multi-AZ EC2 targets.
+
+### AWS CLI Commands
+```bash
+# Create Public Frontend ALB
+aws elbv2 create-load-balancer \
+  --name alb-bank-frontend \
+  --subnets subnet-10.20.1.0-id subnet-10.20.2.0-id \
+  --security-groups sg-alb-id \
+  --scheme internet-facing \
+  --type application
+
+# Create Public Backend API ALB
+aws elbv2 create-load-balancer \
+  --name alb-bank-backend \
+  --subnets subnet-10.20.1.0-id subnet-10.20.2.0-id \
+  --security-groups sg-alb-id \
+  --scheme internet-facing \
+  --type application
+```
+
+---
+
+## Component 10: Auto Scaling Groups (ASG)
+
+### Purpose
+Maintain high availability and dynamic elasticity by automatically scaling EC2 capacity based on CPU metrics.
+
+### AWS CLI Commands
+```bash
+# Create ASG for Application Tier across Subnets 5a & 6b
+aws autoscaling create-auto-scaling-group \
+  --auto-scaling-group-name asg-backend-tier \
+  --launch-template LaunchTemplateId=lt-bank-backend-id,Version=1 \
+  --min-size 2 \
+  --max-size 10 \
+  --desired-capacity 4 \
+  --vpc-zone-identifier "subnet-10.20.5.0-id,subnet-10.20.6.0-id" \
+  --target-group-arns arn:aws:elasticloadbalancing:us-east-1:123456789012:targetgroup/tg-backend-api/123 \
+  --health-check-type ELB \
+  --health-check-grace-period 300
+```
+
+---
+
+## Component 11: AWS Certificate Manager (ACM) SSL/TLS
+
+### Purpose
+Request and manage 256-bit SSL certificates for HTTPS encryption.
+
+### AWS CLI Commands
+```bash
+# Request Certificate for Domain *.rebel7781.xyz
+aws acm request-certificate \
+  --domain-name "*.rebel7781.xyz" \
+  --validation-method DNS \
+  --idempotency-token bankcert2026
+```
+
+---
+
+## Component 12: Route 53 Public & Private DNS
+
+### Purpose
+Configure DNS record routing for public endpoints (`virat.rebel7781.xyz`, `api.rebel7781.xyz`) and private database endpoint (`book.rbs.com`).
+
+### AWS CLI Commands
+```bash
+# Create Private Hosted Zone rbs.com associated with bank-vpc
+aws route53 create-hosted-zone \
+  --name rbs.com \
+  --vpc VPCRegion=us-east-1,VPCId=vpc-12345678 \
+  --caller-reference bank-private-dns-2026
+
+# Create CNAME Record for book.rbs.com
+aws route53 change-resource-record-sets \
+  --hosted-zone-id Z123456789 \
+  --change-batch '{
+    "Changes": [{
+      "Action": "UPSERT",
+      "ResourceRecordSet": {
+        "Name": "book.rbs.com",
+        "Type": "CNAME",
+        "TTL": 300,
+        "ResourceRecords": [{"Value": "bank-rds-mysql.c123456.us-east-1.rds.amazonaws.com"}]
+      }
+    }]
+  }'
+```
+
+---
+
+## Component 13: Amazon RDS MySQL Multi-AZ Cluster
+
+### Purpose
+Deploy Multi-AZ MySQL Database engine in isolated subnets `10.20.7.0/24` and `10.20.8.0/24`.
 
 ### AWS CLI Command
 ```bash
@@ -99,134 +234,11 @@ aws rds create-db-instance \
   --db-instance-identifier bank-rds-mysql \
   --db-instance-class db.r6g.xlarge \
   --engine mysql \
-  --engine-version 8.0.35 \
   --master-username admin \
   --master-user-password Somesh12345 \
   --allocated-storage 100 \
-  --max-allocated-storage 500 \
   --multi-az \
   --vpc-security-group-ids sg-database-id \
   --db-subnet-group-name dbsng-bank-vpc \
-  --no-publicly-accessible \
-  --backup-retention-period 35 \
-  --preferred-backup-window 02:00-03:00 \
-  --preferred-maintenance-window sun:04:00-sun:05:00
-```
-
-### Verification Command
-```bash
-aws rds describe-db-instances \
-  --db-instance-identifier bank-rds-mysql \
-  --query "DBInstances[0].[DBInstanceStatus, Endpoint.Address, MultiAZ]" --output table
-```
-
----
-
-## Step 22: Configure & Start Node.js Backend API via PM2
-
-### Purpose
-Launch the Node.js application under PM2 process supervision across all available CPU cores.
-
-### Linux Commands
-```bash
-# Navigate to backend application directory
-cd /home/ec2-user/bank_portal/backend
-
-# Install production dependencies
-npm install --production
-
-# Create production .env configuration
-cat << 'EOF' > .env
-PORT=5000
-NODE_ENV=production
-JWT_SECRET=my_super_secret_jwt_key_123
-DB_HOST=book.rbs.com
-DB_PORT=3306
-DB_USER=admin
-DB_PASSWORD=Somesh12345
-DB_NAME=bank_portal_db
-EOF
-
-# Start Node.js cluster via PM2
-pm2 start index.js -i max --name "backendapi"
-
-# Save PM2 process list for auto-boot recovery
-pm2 save
-sudo env PATH=$PATH:/usr/bin /usr/lib/node_modules/pm2/bin/pm2 startup systemd -u ec2-user --hp /home/ec2-user
-```
-
-### Verification Command
-```bash
-pm2 status
-curl -s http://localhost:5000/api/health
-```
-
----
-
-## Step 23: Configure Apache HTTP Reverse Proxy & SSL Termination
-
-### Purpose
-Configure Apache (`httpd`) on Presentation Tier instances to serve React static production assets directly and reverse proxy `/api` requests to Node.js backend processes.
-
-### Linux Commands
-```bash
-# Write virtual host configuration
-sudo bash -c 'cat << "EOF" > /etc/httpd/conf.d/bank_portal.conf
-<VirtualHost *:80>
-    ServerName virat.rebel7781.xyz
-    DocumentRoot /var/www/html/dist
-
-    <Directory "/var/www/html/dist">
-        Options Indexes FollowSymLinks
-        AllowOverride All
-        Require all granted
-        RewriteEngine On
-        RewriteBase /
-        RewriteRule ^index\.html$ - [L]
-        RewriteCond %{REQUEST_FILENAME} !-f
-        RewriteCond %{REQUEST_FILENAME} !-d
-        RewriteRule . /index.html [L]
-    </Directory>
-
-    ProxyRequests Off
-    ProxyPreserveHost On
-    ProxyPass /api http://127.0.0.1:5000/api
-    ProxyPassReverse /api http://127.0.0.1:5000/api
-</VirtualHost>
-EOF'
-
-# Enable SELinux HTTP proxy permission
-sudo setsebool -P httpd_can_network_connect 1
-
-# Test Apache Syntax & Restart
-sudo httpd -t
-sudo systemctl restart httpd
-```
-
-### Verification Command
-```bash
-sudo systemctl status httpd
-curl -Iv http://localhost/api/health
-```
-
----
-
-## Step 25: End-to-End Production Verification & Health Check
-
-### Linux Verification Commands
-```bash
-# Test Public Frontend Domain
-curl -Iv https://virat.rebel7781.xyz
-
-# Test Public Backend API Endpoint
-curl -s https://api.rebel7781.xyz/api/health
-```
-
-### Expected Output
-```json
-{
-  "status": "UP",
-  "service": "Banking Portal REST API",
-  "timestamp": "2026-07-24T20:59:00.000Z"
-}
+  --no-publicly-accessible
 ```
