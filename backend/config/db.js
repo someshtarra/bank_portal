@@ -8,6 +8,123 @@ let pool = null;
 let sqliteDb = null;
 let isSqliteFallback = false;
 
+// Auto-create MySQL tables on startup if missing
+const autoInitMysqlTables = async (dbPool) => {
+    try {
+        const connection = await dbPool.getConnection();
+        const hashedPassword = bcrypt.hashSync('Password@123', 10);
+
+        await connection.query(`CREATE TABLE IF NOT EXISTS users (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            first_name VARCHAR(50) NOT NULL,
+            last_name VARCHAR(50) NOT NULL,
+            email VARCHAR(100) NOT NULL UNIQUE,
+            password VARCHAR(255) NOT NULL,
+            phone VARCHAR(20) NOT NULL,
+            role ENUM('admin', 'employee', 'customer') NOT NULL DEFAULT 'customer',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`);
+
+        await connection.query(`CREATE TABLE IF NOT EXISTS customers (
+            customer_id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL UNIQUE,
+            address TEXT NOT NULL,
+            dob DATE NOT NULL,
+            aadhaar VARCHAR(12) NOT NULL UNIQUE,
+            pan VARCHAR(10) NOT NULL UNIQUE,
+            kyc_status ENUM('pending', 'verified', 'rejected') DEFAULT 'pending',
+            avatar_url VARCHAR(255) DEFAULT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`);
+
+        await connection.query(`CREATE TABLE IF NOT EXISTS accounts (
+            account_id INT AUTO_INCREMENT PRIMARY KEY,
+            customer_id INT NOT NULL,
+            account_number VARCHAR(20) NOT NULL UNIQUE,
+            account_type ENUM('savings', 'checking', 'salary') NOT NULL DEFAULT 'savings',
+            balance DECIMAL(15, 2) NOT NULL DEFAULT 1000.00,
+            status ENUM('active', 'frozen', 'closed') NOT NULL DEFAULT 'active',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (customer_id) REFERENCES customers(customer_id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`);
+
+        await connection.query(`CREATE TABLE IF NOT EXISTS transactions (
+            transaction_id INT AUTO_INCREMENT PRIMARY KEY,
+            account_id INT NOT NULL,
+            transaction_type ENUM('deposit', 'withdrawal', 'transfer_debit', 'transfer_credit') NOT NULL,
+            amount DECIMAL(15, 2) NOT NULL,
+            description VARCHAR(255) DEFAULT NULL,
+            reference_number VARCHAR(50) NOT NULL UNIQUE,
+            sender_account VARCHAR(20) DEFAULT NULL,
+            receiver_account VARCHAR(20) DEFAULT NULL,
+            status ENUM('pending', 'success', 'failed') NOT NULL DEFAULT 'success',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (account_id) REFERENCES accounts(account_id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`);
+
+        await connection.query(`CREATE TABLE IF NOT EXISTS loans (
+            loan_id INT AUTO_INCREMENT PRIMARY KEY,
+            customer_id INT NOT NULL,
+            loan_type VARCHAR(50) NOT NULL,
+            amount DECIMAL(15, 2) NOT NULL,
+            interest_rate DECIMAL(5, 2) NOT NULL DEFAULT 10.50,
+            duration INT NOT NULL,
+            status ENUM('pending', 'approved', 'rejected', 'disbursed', 'closed') DEFAULT 'pending',
+            applied_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            approved_date TIMESTAMP NULL DEFAULT NULL,
+            FOREIGN KEY (customer_id) REFERENCES customers(customer_id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`);
+
+        await connection.query(`CREATE TABLE IF NOT EXISTS cards (
+            card_id INT AUTO_INCREMENT PRIMARY KEY,
+            customer_id INT NOT NULL,
+            card_number VARCHAR(20) NOT NULL UNIQUE,
+            card_holder VARCHAR(100) NOT NULL,
+            expiry VARCHAR(7) NOT NULL,
+            cvv VARCHAR(255) NOT NULL,
+            type ENUM('debit', 'credit') NOT NULL DEFAULT 'debit',
+            status ENUM('active', 'blocked', 'expired') NOT NULL DEFAULT 'active',
+            daily_limit DECIMAL(15, 2) DEFAULT 50000.00,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (customer_id) REFERENCES customers(customer_id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`);
+
+        await connection.query(`CREATE TABLE IF NOT EXISTS beneficiaries (
+            beneficiary_id INT AUTO_INCREMENT PRIMARY KEY,
+            customer_id INT NOT NULL,
+            beneficiary_account VARCHAR(20) NOT NULL,
+            beneficiary_name VARCHAR(100) NOT NULL,
+            nickname VARCHAR(50) DEFAULT NULL,
+            bank_name VARCHAR(100) DEFAULT 'Apex National Bank',
+            ifsc_code VARCHAR(11) DEFAULT 'APEX0001024',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (customer_id) REFERENCES customers(customer_id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`);
+
+        await connection.query(`CREATE TABLE IF NOT EXISTS audit_logs (
+            log_id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT DEFAULT NULL,
+            action VARCHAR(255) NOT NULL,
+            ip_address VARCHAR(45) DEFAULT NULL,
+            details TEXT DEFAULT NULL,
+            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`);
+
+        await connection.query(`INSERT IGNORE INTO users (id, first_name, last_name, email, password, phone, role) VALUES
+            (1, 'System', 'Admin', 'admin@bankportal.com', '${hashedPassword}', '+91 9876543210', 'admin'),
+            (2, 'Sarah', 'Officer', 'employee@bankportal.com', '${hashedPassword}', '+91 9876543211', 'employee'),
+            (3, 'Rajesh', 'Kumar', 'rajesh.kumar@example.com', '${hashedPassword}', '+91 9876543212', 'customer')`);
+
+        connection.release();
+        console.log('⚡ MySQL Database tables auto-initialized successfully.');
+    } catch (err) {
+        console.warn('⚠️ MySQL table auto-initialization warning:', err.message);
+    }
+};
+
 // Initialize Database connection pool with SQLite fallback
 const initDB = async () => {
     if (process.env.NODE_ENV === 'test' || process.env.USE_SQLITE === 'true') {
@@ -29,6 +146,10 @@ const initDB = async () => {
         const connection = await pool.getConnection();
         console.log('✅ MySQL Database connected successfully.');
         connection.release();
+
+        // Auto-create all required tables if missing
+        await autoInitMysqlTables(pool);
+
         return pool;
     } catch (err) {
         console.warn('⚠️  MySQL connection failed:', err.message);
