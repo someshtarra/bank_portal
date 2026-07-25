@@ -106,6 +106,42 @@ The platform segregates infrastructure into three distinct, decoupled operationa
 
 ---
 
+## 📸 Live Production Application Interfaces
+
+The platform features an institutional dark-mode design system built with React 18, Tailwind CSS, and Lucide icons, deployed live on AWS at `https://virat.rebel7781.xyz` (`bank.rebel7781.xyz`):
+
+````carousel
+![Digital Account Onboarding](docs/screenshots/register_page.png)
+<!-- slide -->
+![NetBanking Login Portal](docs/screenshots/login_page.png)
+<!-- slide -->
+![Executive Admin Analytics](docs/screenshots/admin_dashboard.png)
+<!-- slide -->
+![Customer Banking Portal](docs/screenshots/customer_dashboard.png)
+````
+
+### 1. Customer Digital Account Onboarding (`/register`)
+Instant customer onboarding featuring real-time KYC validation, Aadhaar/PAN input validation, and automatic ₹5,000 opening bonus balance initialization.
+
+![Digital Account Onboarding](docs/screenshots/register_page.png)
+
+### 2. Secure NetBanking Login Portal (`/login`)
+RBAC NetBanking authentication supporting customer, employee, and administrator roles with quick demo account shortcuts and JWT token security.
+
+![NetBanking Login Portal](docs/screenshots/login_page.png)
+
+### 3. Executive Admin Analytics & System Overview (`/admin-dashboard`)
+Real-time executive oversight displaying bank-wide cash flow analytics, active account balances, total liquid assets, and real-time security audit logs.
+
+![Executive Admin Analytics](docs/screenshots/admin_dashboard.png)
+
+### 4. Customer Banking Portal & Financial Overview (`/customer-dashboard`)
+Comprehensive customer self-service dashboard providing instant fund transfers, savings/checking account monitoring, credit/debit card management, and transaction history export.
+
+![Customer Banking Portal](docs/screenshots/customer_dashboard.png)
+
+---
+
 ## 🔗 Step-by-Step AWS Connection Guide: Frontend ➔ Backend ➔ Database
 
 ```mermaid
