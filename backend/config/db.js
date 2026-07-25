@@ -331,6 +331,12 @@ const query = async (sql, params = []) => {
         const [results] = await pool.query(sql, params);
         return [results];
     } catch (error) {
+        if (error.code === 'ER_NO_SUCH_TABLE' || (error.message && error.message.includes("doesn't exist"))) {
+            console.log('🔄 Missing table detected. Auto-creating MySQL tables and retrying query...');
+            await autoInitMysqlTables(pool);
+            const [retryResults] = await pool.query(sql, params);
+            return [retryResults];
+        }
         console.error('Database query error:', error.message);
         throw error;
     }
