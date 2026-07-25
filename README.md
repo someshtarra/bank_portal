@@ -106,6 +106,116 @@ The platform segregates infrastructure into three distinct, decoupled operationa
 
 ---
 
+## 🔗 Step-by-Step AWS Connection Guide: Frontend ➔ Backend ➔ Database
+
+```mermaid
+flowchart LR
+    subgraph Tier1 ["Presentation Tier"]
+        React["React SPA<br/>(virat.rebel7781.xyz)"]
+        Apache["Apache httpd<br/>(Port 80/443)"]
+    end
+
+    subgraph Tier2 ["Application Tier"]
+        BackendALB["Backend ALB<br/>(api.rebel7781.xyz)"]
+        NodeAPI["Node.js REST API<br/>(Port 5000 / PM2)"]
+    end
+
+    subgraph Tier3 ["Database Tier"]
+        RDS["Amazon RDS MySQL<br/>(book.rbs.com:3306)"]
+    end
+
+    React -->|1. Axios HTTPS POST| BackendALB
+    BackendALB -->|2. Forward Port 5000| NodeAPI
+    NodeAPI -->|3. MySQL Pool Connection| RDS
+```
+
+### 1. Connecting Frontend to Backend API in AWS
+
+The React Frontend connects to the Node.js Backend API using **Vite Environment Variables**, **Axios API Interceptors**, and **AWS Application Load Balancers**:
+
+1. **Environment Configuration (`client/.env`)**:
+   ```ini
+   VITE_API_URL=https://api.rebel7781.xyz/api
+   ```
+2. **Axios Centralized Service (`client/src/services/api.js`)**:
+   ```javascript
+   import axios from 'axios';
+
+   const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+
+   const api = axios.create({
+     baseURL: API_BASE_URL,
+     headers: { 'Content-Type': 'application/json' }
+   });
+
+   // Automatically attaches JWT authentication token to every request
+   api.interceptors.request.use((config) => {
+     const token = localStorage.getItem('token');
+     if (token) {
+       config.headers.Authorization = `Bearer ${token}`;
+     }
+     return config;
+   });
+
+   export default api;
+   ```
+3. **Build & Deploy Frontend Artifacts to Apache**:
+   ```bash
+   cd client
+   npm run build
+   sudo cp -r dist/* /var/www/html/dist/
+   sudo systemctl restart httpd
+   ```
+
+---
+
+### 2. Connecting Backend to Amazon RDS MySQL Database in AWS
+
+The Node.js Express API connects to the Amazon RDS MySQL Multi-AZ cluster using **`mysql2/promise` connection pooling** and **AWS Route 53 Private Hosted Zones**:
+
+1. **Environment Configuration (`backend/.env`)**:
+   ```ini
+   PORT=5000
+   NODE_ENV=production
+   JWT_SECRET=somesh_bank_secret_key_123
+
+   # AWS RDS Connection Credentials
+   DB_HOST=book.rbs.com
+   DB_PORT=3306
+   DB_USER=admin
+   DB_PASSWORD=Somesh12345
+   DB_NAME=test
+   ```
+
+2. **Connection Pool & Auto Schema Initializer (`backend/config/db.js`)**:
+   ```javascript
+   const mysql = require('mysql2/promise');
+
+   const pool = mysql.createPool({
+       host: process.env.DB_HOST,        // 'book.rbs.com'
+       port: process.env.DB_PORT,        // 3306
+       user: process.env.DB_USER,        // 'admin'
+       password: process.env.DB_PASSWORD,  // 'Somesh12345'
+       database: process.env.DB_NAME,    // 'test'
+       waitForConnections: true,
+       connectionLimit: 10
+   });
+   ```
+
+3. **AWS Security Group Rule (`sg-database`)**:
+   In AWS Console, ensure the Database Security Group `sg-database` contains:
+   * **Type**: `MYSQL/Aurora` (`3306`)
+   * **Source**: `sg-backend` (Security Group ID of the Backend EC2 Instance)
+
+4. **Initialize Database Schema & Start Backend Process**:
+   ```bash
+   cd backend
+   mysql -h book.rbs.com -u admin -pSomesh12345 test < test.sql
+   pm2 restart backendapi || pm2 start index.js --name "backendapi"
+   ```
+
+---
+
 # 4. Enterprise Architecture Diagrams
 
 ### 4.1 Complete 3-Tier Architecture Diagram
